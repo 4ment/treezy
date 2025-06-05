@@ -1,6 +1,9 @@
 # treezy
 
+[![Tests](https://github.com/4ment/treezy/actions/workflows/test.yml/badge.svg)](https://github.com/4ment/treezy/actions/workflows/test.yml)
 [![License: MIT](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
+![PyPI](https://img.shields.io/pypi/v/treezy)
+![PyPI - Python Version](https://img.shields.io/pypi/pyversions/treezy)
 
 treezy is a simple Python library for manipulating phylogenetic trees, including reading from and writing to files.
 

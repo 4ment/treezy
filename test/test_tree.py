@@ -135,8 +135,6 @@ def test_post_order_iterator():
 
     nodes = list(tree.root.postorder())
     assert len(nodes) == 5
-    print(nodes)
-
     assert nodes[0].name == "A"
     assert nodes[1].name == "B"
     assert nodes[3].name == "C"
