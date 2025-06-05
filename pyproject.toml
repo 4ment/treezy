@@ -1,0 +1,76 @@
+[build-system]
+requires = ["setuptools", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "treezy"
+version = "0.0.1"
+description = "Simple library for manipulating phylogenetic trees"
+authors = [{ name = "Mathieu Fourment", email = "mathieu.fourment@uts.edu.au" }]
+keywords=[
+    "bioinformatics",
+    "phylogenetics",
+    "tree",
+]
+readme = "README.md"
+requires-python = ">=3.9"
+dependencies = []
+classifiers = [
+    "Intended Audience :: Science/Research",
+    "Operating System :: OS Independent",
+    "Programming Language :: Python :: 3.9",
+    "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Topic :: Scientific/Engineering :: Bio-Informatics"
+]
+
+[project.license]
+text="MIT"
+files=["LICENSE"]
+
+[project.urls]
+homepage = "https://github.com/4ment/treezy"
+repository = "https://github.com/4ment/treezy"
+
+[tool.pytest.ini_options]
+addopts = "--doctest-modules"
+testpaths = [
+    "test",
+    "treezy"
+]
+
+[tool.black]
+skip-string-normalization = true
+
+[tool.isort]
+profile = "black"
+
+[tool.pylint.messages_control]
+disable = [
+    "missing-module-docstring",
+    "no-else-return",
+    "too-many-ancestors",
+]
+
+[tool.bumpver]
+current_version = "0.0.1"
+version_pattern = "MAJOR.MINOR.PATCH"
+commit_message = "bump version {old_version} -> {new_version}"
+tag_message = "{new_version}"
+tag_scope = "default"
+pre_commit_hook = ""
+post_commit_hook = ""
+commit = true
+tag = true
+push = true
+
+[tool.bumpver.file_patterns]
+"pyproject.toml" = [
+    'current_version = "{version}"',
+    'version = "{version}"',
+]
+"treezy/__init__.py" = [
+    '^__version__ = "{version}"$',
+]
+
