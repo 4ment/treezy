@@ -253,13 +253,12 @@ class Node:
             self._annotations.update(annotations)
         return annotations
 
-    def parse_branch_comment(self, converters: Dict[str, Any] = None) -> Dict[str, Any]:
+    def parse_branch_comment(self, converters: Dict[str, Any] = None) -> None:
         if not self._branch_comment:
             return {}
         annotations = parse_comment(self._branch_comment, converters)
         if annotations:
             self._branch_annotations.update(annotations)
-        return annotations
 
     def _make_comment_for_newick(self, options: Dict[str, Any]) -> tuple[str, str]:
         def build_comment(raw_comment, annotations, include_flag, keys_option):
