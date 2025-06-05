@@ -5,7 +5,7 @@ name: Tests
 
 on:
   push:
-    branches: [ "action-dev" ]
+    branches: [ "main" ]
   pull_request:
     branches: [ "main" ]
   workflow_dispatch:
