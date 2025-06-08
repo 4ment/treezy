@@ -36,8 +36,8 @@ def make_nexus(trees, translate=None, taxa=None, comments=None):
 def test_nexusreader_count_trees_simple():
     data = make_nexus(["(A,B);", "(C,D);"])
     f = io.StringIO(data)
-    nf = NexusReader(f)
-    assert nf.count_trees() == 2
+    with NexusReader(f) as nf:
+        assert nf.count_trees() == 2
 
 
 def test_nexusreader_parse_simple():
@@ -47,6 +47,7 @@ def test_nexusreader_parse_simple():
     trees = nf.parse()
     assert trees[0].newick() == "(A,B);"
     assert trees[1].newick() == "(B,A);"
+    nf.close()
 
 
 def test_nexusreader_next_and_has_next():
@@ -61,6 +62,7 @@ def test_nexusreader_next_and_has_next():
     assert t2.newick() == "(B,A);"
     assert not nf.has_next()
     assert nf.next() is None
+    nf.close()
 
 
 def test_nexusreader_skip_next():
@@ -73,15 +75,16 @@ def test_nexusreader_skip_next():
     t = nf.next()
     assert t.newick() == "(B,A);"
     assert not nf.has_next()
+    nf.close()
 
 
 def test_nexusreader_empty():
     f = io.StringIO("")
-    nf = NexusReader(f)
-    assert nf.count_trees() == 0
-    assert nf.parse() == []
-    assert not nf.has_next()
-    assert nf.next() is None
+    with NexusReader(f) as nf:
+        assert nf.count_trees() == 0
+        assert nf.parse() == []
+        assert not nf.has_next()
+        assert nf.next() is None
 
 
 def test_nexusreader_translate_block():
@@ -89,8 +92,8 @@ def test_nexusreader_translate_block():
     trees = ["(1,2);"]
     data = make_nexus(trees, translate=translate)
     f = io.StringIO(data)
-    nf = NexusReader(f)
-    trees = nf.parse()
+    with NexusReader(f) as nf:
+        trees = nf.parse()
     assert len(trees) == 1
     assert set(nf.taxon_names) == {"A", "B"}
     assert trees[0].newick() == "(A,B);"
@@ -103,6 +106,7 @@ def test_nexusreader_with_taxlabels():
     f = io.StringIO(data)
     nf = NexusReader(f, taxa)
     trees = nf.parse()
+    nf.close()
     assert len(trees) == 2
     assert trees[0].taxon_names == taxa
     assert trees[1].taxon_names == taxa
@@ -116,6 +120,7 @@ def test_nexusreader_with_taxon_space():
     f = io.StringIO(data)
     nf = NexusReader(f, taxon_names)
     trees = nf.parse()
+    nf.close()
     assert len(trees) == 2
     assert trees[0].taxon_names == taxon_names
     assert trees[1].taxon_names == taxon_names
@@ -128,6 +133,7 @@ def test_nexusreader_raise_on_different_taxa():
     assert nf.count_trees() == 2
     with pytest.raises(Exception):
         nf.parse()
+    nf.close()
 
 
 def test_nexusreader_comments():
@@ -138,12 +144,14 @@ def test_nexusreader_comments():
     trees = nf.parse()
     assert trees[0].newick() == "(A,B);"
     assert trees[1].newick() == "(B,A);"
+    nf.close()
 
 
 def test_nexusreader_skip_next_on_empty():
     f = io.StringIO("")
     nf = NexusReader(f)
     nf.skip_next()  # Should not raise
+    nf.close()
 
 
 def test_nexusreader_skip_next_multiple():
@@ -156,6 +164,7 @@ def test_nexusreader_skip_next_multiple():
     t = nf.next()
     assert t.newick() == "(B,A,C);"
     assert not nf.has_next()
+    nf.close()
 
 
 def test_nexusreader_with_comment():
@@ -169,6 +178,7 @@ def test_nexusreader_with_comment():
     f = io.StringIO(data)
     nf = NexusReader(f)
     trees = nf.parse()
+    nf.close()
     assert trees[0].newick() == "(A,B);"
     assert trees[1].newick() == "(B,A);"
     assert trees[0].comment == "[&lnl=-1,prior=0.1,a=[0,2]]"
@@ -232,7 +242,7 @@ def test_nexuswriter_context_manager(tmp_path):
     tree = Tree.from_newick("(A,B);")
     file_path = tmp_path / "ctx.nex"
     with NexusWriter(str(file_path), include_translate=False) as writer:
-        writer.start_block("trees")
+        writer.begin_block("trees")
         writer.write([tree])
         writer.end_block()
     with open(file_path) as f:

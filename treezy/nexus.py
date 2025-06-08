@@ -17,21 +17,62 @@ class NexusReader(TreeReader):
     and can handle comments within tree definitions.
     It also provides methods to parse or skip trees one by one, which helps avoid memory
     overload when working with large datasets or when subsampling trees.
+
+    Example
+    -------
+    A typical file might contain::
+
+        #NEXUS
+        Begin trees;
+        Translate
+            1 A,
+            2 B,
+            3 C;
+        tree tree1 = [&R] ((1,2),3);
+        tree tree2 = [&R] ((1,3),2);
+        End;
+
+    Example
+    -------
+    >>> import io
+    >>> nexus_data = '''#NEXUS
+    ... Begin trees;
+    ... Translate
+    ...     1 A,
+    ...     2 B,
+    ...     3 C;
+    ... tree tree1 = [&R] ((1,2),3);
+    ... tree tree2 = [&R] ((1,3),2);
+    ... End;
+    ... '''
+    >>> f = io.StringIO(nexus_data)
+    >>> with NexusReader(f) as reader:
+    ...     for tree in reader.parse():
+    ...         print(tree.newick())
+    ((A,B),C);
+    ((A,C),B);
     """
 
     def __init__(
-        self, in_stream: IO[str], taxon_names: Optional[List[str]] = None, **options
+        self,
+        path_or_stream: Union[str, IO],
+        taxon_names: Optional[List[str]] = None,
+        **options,
     ):
         """Initializes a NexusReader instance.
 
-        Args:
-            in_stream (IO[str]): the input stream to read Nexus data from.
-            taxon_names (Optional[List[str]]): list of taxon names to use for the trees.
-            **kwargs: Additional keyword arguments. Currently supports:
+        Parameters
+        ----------
+        in_stream
+            the file path or IO stream to read the Nexus file.
+        taxon_names
+            list of taxon names to use for the trees.
+        options
+            Additional keyword arguments. Currently supports:
                 - `strip_quotes`: bool, whether to strip quotes from taxon names in the
                 translate block (default: False)
         """
-        super().__init__(in_stream, taxon_names)
+        super().__init__(path_or_stream, taxon_names)
         self._taxon_map = {}  # maps taxon names to their indices in taxon_names
         self._translate_map = None  # maps shorthand to full taxon names
         self._current_tree_string = None
@@ -46,10 +87,15 @@ class NexusReader(TreeReader):
         "Begin <block_name>". It returns True if the block is found, otherwise False.
         Mostly used to find "Begin trees;".
 
-        Args:
-            block_name (str): the name of the block to search for (e.g., "trees").
-        Returns:
-            bool: True if the block is found, False otherwise.
+        Parameters
+        ----------
+        block_name
+            the name of the block to search for (e.g., "trees").
+
+        Returns
+        -------
+        bool
+            True if the block is found, False otherwise.
         """
         for line in self.in_stream:
             if line.lstrip().lower().startswith(f"begin {block_name}"):
@@ -59,12 +105,15 @@ class NexusReader(TreeReader):
     def count_trees(self) -> int:
         """Counts the number of trees in the Nexus file.
 
-        This method scans through the input stream to count lines that start with "tree"
-        after the "Begin trees;" block. It returns the total count of such lines.
+        This method scans through the input stream to count lines that start with
+        ``tree`` after the ``Begin trees;`` block. It returns the total count of
+        such lines.
         The stream is reset to the beginning after counting.
 
-        Returns:
-            int: the number of trees found in the Nexus file.
+        Returns
+        -------
+        int
+            the number of trees found in the Nexus file.
         """
         if self._count > 0:
             return self._count
@@ -134,15 +183,23 @@ class NexusReader(TreeReader):
     def _parse_tree_line(self, line: str) -> Tree:
         """Parses a single tree line from the Nexus file.
 
-        This method extracts the Newick string from a line that starts with "tree",
+        This method extracts the Newick string from a line that starts with `tree`,
         handles comments, and translates taxon names if a "Translate" block was present.
 
-        Args:
-            line (str): the line containing the tree definition.
-        Returns:
-            Tree: a Tree object constructed from the Newick string in the line.
-        Raises:
-            ValueError: if the line does not contain a valid tree definition or if
+        Parameters
+        ----------
+        line
+            the line containing the tree definition.
+
+        Returns
+        -------
+        Tree
+            a Tree object constructed from the Newick string in the line.
+
+        Raises
+        ------
+        ValueError
+            if the line does not contain a valid tree definition or if
             the Newick string is malformed.
         """
         start = line.lower().find("tree")
@@ -267,12 +324,14 @@ class NexusReader(TreeReader):
     def next(self) -> Optional[Tree]:
         """Returns the next tree from the Nexus file.
 
-        This method reads the next tree line from the Nexus file, parses it into a Tree
-        object, and returns it. If there are no more trees, it returns None.
+        This method reads the next tree line from the Nexus file, parses it into a
+        :class:`~treezy.tree.Tree` object, and returns it. If there are no more trees,
+        it returns ``None``.
 
-        Returns:
-            Optional[Tree]: the next Tree object, or None if no more trees are
-            available.
+        Returns
+        -------
+        Optional[Tree]:
+            the next tree object, or `None` if no more trees are available.
         """
         if self.has_next():
             tree = self._parse_tree_line(self._current_tree_string)
@@ -304,12 +363,15 @@ class NexusWriter(TreeWriter):
     names. The writer can be used as a context manager to ensure proper file handling.
     """
 
-    def __init__(self, path, **options):
+    def __init__(self, path_or_stream: Union[str, IO], **options):
         """Initializes a NexusWriter instance.
 
-        Args:
-            path (str): the file path to save the Nexus file.
-            options (dict): formatting options for the Nexus file.
+        Parameters
+        ----------
+        path
+            the file path to save the Nexus file.
+        options
+            formatting options for the Nexus file.
                 - `mode`: str, file mode for writing (default: 'w')
                 - `include_translate`: bool, whether to include a translation block
                   (default: True)
@@ -318,12 +380,10 @@ class NexusWriter(TreeWriter):
                 - `tree_prefix`: str, prefix for tree names (default: `STATE_`)
                 - Other Newick options as needed.
         """
-        super().__init__(path)
+        super().__init__(path_or_stream)
         self.options = options
-        self._file = None
         self._tree_counter = 0
         self._mode = options.get('mode', 'w')
-        self._opened = False
         self._translate_written = False
         nexus_keys = {
             'include_translate',
@@ -334,44 +394,46 @@ class NexusWriter(TreeWriter):
         self._newick_options = {k: v for k, v in options.items() if k not in nexus_keys}
 
     def __enter__(self):
-        self._file = open(self._path, self._mode)
-        self._file.write("#NEXUS\n")
-
-        self._opened = True
+        self._out_stream.write("#NEXUS\n")
         return self
 
-    def __exit__(self, exc_type, exc_value, traceback):
-        if self._file:
-            self._file.close()
-        self._opened = False
+    def begin_block(self, block_name: str) -> None:
+        """Begins a new block in the Nexus file.
 
-    def start_block(self, block_name: str):
-        if not self._opened:
-            raise RuntimeError(
-                "NexusWriter must be opened with 'with' statement before writing."
-            )
-        self._file.write(f"Begin {block_name};\n")
+        This method writes the opening line for a block, such as ``Begin trees;`` or
+        ``Begin taxa;``.
 
-    def end_block(self):
-        if not self._opened:
-            raise RuntimeError(
-                "NexusWriter must be opened with 'with' statement before writing."
-            )
-        self._file.write("End;\n")
+        Parameters
+        ----------
+        block_name
+            the name of the block to begin (e.g., "trees", "taxa").
+        """
+        self._out_stream.write(f"Begin {block_name};\n")
+
+    def end_block(self) -> None:
+        """Ends the current block in the Nexus file."""
+        self._out_stream.write("End;\n")
 
     @staticmethod
     def write_translate_and_map(writer, taxon_names: List[str]) -> dict:
-        """Writes the 'Translate' block to the Nexus file.
+        """Writes the ``Translate`` block to the Nexus file.
 
         The translate block maps taxon names to their indices (starting from 1)
         in the taxon_names list.
-        For example a taxnon_names list of ['A', 'B'] will result in:
+
+        Example
+        -------
+        A taxon_names list of `['B', 'A', 'C']` will result in::
+
             Translate
-              1 A,
-              2 B;
-        Args:
-            taxon_names (List[str]): List of taxon names to include in the
-             translate block.
+                1 B,
+                2 A,
+                3 C;
+
+        Parameters
+        ----------
+        taxon_names:
+            List of taxon names to include in the translate block.
         """
         writer.write("Translate\n")
         translate_list = []
@@ -382,32 +444,59 @@ class NexusWriter(TreeWriter):
         writer.write(",\n".join(translate_list) + ";\n")
         return translate_taxa
 
+    def write_taxa_block(self, taxon_names: List[str]) -> None:
+        """Writes the ``Taxa`` block to the Nexus file.
+
+        Parameters
+        ----------
+        taxon_names
+            List of taxon names to include in the taxa block.
+        """
+        self._out_stream.write("Begin taxa;")
+        self._out_stream.write(f"  Dimensions ntax={len(taxon_names)};")
+        self._out_stream.write("  Taxlabels " + " ".join(taxon_names) + ";")
+        self._out_stream.write("End;")
+
     def write_translate(self, taxon_names: List[str]) -> None:
-        """Writes the 'Translate' block to the Nexus file.
+        """Writes the ``Translate`` block to the Nexus file.
 
         The translate block maps taxon names to their indices (starting from 1)
         in the taxon_names list.
 
-        For example a taxnon_names list of ['A', 'B'] will result in:
+        Example
+        -------
+        A taxnon_names list of `['A', 'B']` will result in:
+
             Translate
-              1 A,
-              2 B;
-        Args:
-            taxon_names (List[str]): List of taxon names to include in the translate
-              block.
+                1 A,
+                2 B;
+
+        Parameters
+        ----------
+        taxon_names
+            List of taxon names to include in the translate block.
         """
         self._newick_options['translator'] = NexusWriter.write_translate_and_map(
-            self._file, taxon_names
+            self._out_stream, taxon_names
         )
         self._translate_written = True
 
-    def write(self, trees):
-        if not self._opened:
-            raise RuntimeError(
-                "NexusWriter must be opened with 'with' statement before writing."
-            )
+    def write(self, trees: Union[Tree, List[Tree]]) -> None:
+        """Writes trees in Nexus format to the output stream.
 
-        if not isinstance(trees, list):
+        This method writes a single tree or a list of trees in Nexus format,
+        including a translation block if specified in the options. It handles
+        formatting options such as including comments for each tree and
+        specifying a prefix for tree names.
+
+        Parameters
+        ----------
+        trees
+            a single Tree object or a list of Tree objects to write.
+        """
+        if isinstance(trees, str):
+            self._out_stream.write(trees + "\n")
+        elif not isinstance(trees, list):
             trees = [trees]
 
         include_translate = self.options.get('include_translate', True)
@@ -421,12 +510,12 @@ class NexusWriter(TreeWriter):
         for tree in trees:
             self._tree_counter += 1
             name = f"{tree_prefix}{self._tree_counter}"
-            newick = tree.newick(self._newick_options)
-            rooting = 'R' if tree.is_rooted() else 'U'
-            self._file.write(f"tree {name} ")
+            newick = tree.newick(**self._newick_options)
+            rooting = 'R' if tree.is_rooted else 'U'
+            self._out_stream.write(f"tree {name} ")
             if include_tree_comment and tree.comment:
-                self._file.write(f"{tree.comment} ")
-            self._file.write(f"= [&{rooting}] {newick}\n")
+                self._out_stream.write(f"{tree.comment} ")
+            self._out_stream.write(f"= [&{rooting}] {newick}\n")
 
     @classmethod
     def save(
@@ -437,18 +526,20 @@ class NexusWriter(TreeWriter):
         The `options` dictionary can include:
             - `mode`: str, file mode for writing (default: 'w')
             - `include_translate`: bool, whether to include a translation block
-              (default: True)
+              (default: ``True``)
             - `include_tree_comment`: bool, whether to include comments for each tree
-              (default: False)
-            - `tree_prefix`: str, prefix for tree names (default: `STATE_`)
+              (default: ``False``)
+            - `tree_prefix`: str, prefix for tree names (default: ``STATE_``)
             - Other Newick options as needed.
 
-        Args:
-            path_or_stream (str or IO): the file path or IO stream to save the
-              Nexus file.
-            trees (Union[Tree,List[Tree]]): a single Tree object or a list of Tree
-              objects to save.
-            options (dict): formatting options for the Nexus file.
+        Parameters
+        ----------
+        path_or_stream
+            the file path or IO stream to save the Nexus file.
+        trees
+            a single Tree object or a list of tree objects to save.
+        options
+            formatting options for the Nexus file.
         """
         mode = options.get('mode', 'w')
         include_translate = options.get('include_translate', True)
@@ -457,9 +548,9 @@ class NexusWriter(TreeWriter):
 
         nexus_keys = {
             'include_translate',
-            'tree_prefix',
             'include_tree_comment',
             'mode',
+            'tree_prefix',
         }
         newick_options = {k: v for k, v in options.items() if k not in nexus_keys}
 
@@ -483,8 +574,8 @@ class NexusWriter(TreeWriter):
         for tree in trees:
             tree_counter += 1
             name = f"{tree_prefix}{tree_counter}"
-            newick = tree.newick(newick_options)
-            rooting = 'R' if tree.is_rooted() else 'U'
+            newick = tree.newick(**newick_options)
+            rooting = 'R' if tree.is_rooted else 'U'
             f.write(f"tree {name} ")
             if include_tree_comment and tree.comment:
                 f.write(f"{tree.comment} ")

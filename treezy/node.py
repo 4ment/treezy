@@ -1,6 +1,7 @@
 # Copyright 2025 Mathieu Fourment
 # SPDX-License-Identifier: MIT
 
+import copy
 import weakref
 from collections import deque
 from io import StringIO
@@ -10,78 +11,161 @@ from treezy.bitset import BitSet
 
 
 class Node:
-    def __init__(self, name: str = None):
-        self._name: str = name
-        self._id: int = 0
-        self._parent: Optional[weakref.ReferenceType['Node']] = None
-        self._children: List['Node'] = []
-        self._distance: Optional[float] = None
-        self._annotations: Dict[str, Any] = {}
-        self._branch_annotations: Dict[str, Any] = {}
-        self._comment: str = ""
-        self._branch_comment: str = ""
-        self._descendant_bitset: Optional[BitSet] = None
+    """Represents a node in a tree-like structure.
 
-    @property
-    def name(self) -> str:
-        return self._name
+    Each node may have a name, an ID, a distance to its parent, child nodes, and
+    a parent node. It can contain annotations and comments associated with the node
+    or its branch leading to the parent.
 
-    @name.setter
-    def name(self, value: str):
-        self._name = value
+    In practice:
 
-    @property
-    def id(self) -> int:
-        return self._id
+    - Leaf nodes (i.e., nodes without children) must have a name.
+    - Internal nodes are not required to have a name.
+    - The `id` can be arbitrary for standalone nodes, but within a `Tree` object it
+      is unique,ranging from 0 to the total number of nodes.
+    - Leaf node IDs are guaranteed to be less than the number of taxa.
+    - The `distance` field may be omitted if only the topology is of interest.
 
-    @id.setter
-    def id(self, value: int):
-        self._id = value
+    Attributes
+    ----------
+    name
+        The name of the node.
+    id
+        Unique identifier for the node.
+    distance
+        distance to the parent node.
+    children
+        Child nodes of this node.
+    annotations
+        Node-level annotations.
+    branch_annotations
+        Annotations on the branch to the parent.
+    comment
+        comment associated with the node.
+    branch_comment
+        comment associated with the branch to parent.
+    """
 
-    @property
-    def distance(self) -> Optional[float]:
-        return self._distance
+    name: Optional[str]
+    id: int
+    _parent: Optional[weakref.ReferenceType['Node']]
+    children: List['Node']
+    distance: Optional[float]
+    annotations: Dict[str, Any]
+    branch_annotations: Dict[str, Any]
+    comment: Optional[str]
+    branch_comment: Optional[str]
+    _descendant_bitset: Optional[BitSet]
 
-    @distance.setter
-    def distance(self, value: float):
-        self._distance = value
+    def __init__(self, name: Optional[str] = None):
+        """Initializes a Node with an optional name.
 
-    @property
-    def children(self) -> List['Node']:
-        return self._children
+        Parameters
+        ----------
+        name
+            the name of the node. Defaults to None.
+        """
+        self.name = name
+        self.id = -1  # a sensible id will be set later by a Tree object
+        self._parent = None
+        self.children = []
+        self.distance = None
+        self.annotations = {}
+        self.branch_annotations = {}
+        self.comment = None
+        self.branch_comment = None
+        self._descendant_bitset = None
 
-    def child_count(self) -> int:
-        return len(self._children)
+    def __deepcopy__(self, memo):
+        copied = Node(copy.deepcopy(self.name, memo))
+        memo[id(self)] = copied
+        copied.id = self.id
+        copied.distance = copy.deepcopy(self.distance, memo)
+        copied.annotations = copy.deepcopy(self.annotations, memo)
+        copied.branch_annotations = copy.deepcopy(self.branch_annotations, memo)
+        copied.comment = self.comment
+        copied.branch_comment = self.branch_comment
+        copied._descendant_bitset = copy.deepcopy(self._descendant_bitset, memo)
+
+        copied.children = [copy.deepcopy(child, memo) for child in self.children]
+        for child in copied.children:
+            child._parent = copied
+
+        return copied
+
+    def __getitem__(self, index: int) -> 'Node':
+        return self.children[index]
+
+    def __iter__(self):
+        return iter(self.children)
+
+    def __contains__(self, node: 'Node') -> bool:
+        return node in self.children
 
     def child_at(self, index: int) -> 'Node':
-        return self._children[index]
+        """Get the child node at the specified index.
+
+        Parameters
+        ----------
+        index
+            Index of the child node.
+
+        Returns
+        -------
+        Node
+            The child node at the specified index.
+        """
+        return self.children[index]
 
     def add_child(self, node: 'Node') -> bool:
-        if node not in self._children:
-            self._children.append(node)
+        """Add a child node to this node.
+
+        Parameters
+        ----------
+        node
+            The child node to add.
+
+        Returns
+        -------
+        bool
+            True if the child was added, False if it was already present.
+        """
+        if node not in self.children:
+            self.children.append(node)
             node.parent = self
             return True
         return False
 
     def remove_child(self, node: 'Node') -> bool:
-        if node in self._children:
-            self._children.remove(node)
-            node.remove_parent()
+        """Remove a child node from this node.
+
+        Parameters
+        ----------
+        node
+            The child node to remove.
+
+        Returns
+        -------
+        bool
+            True if the child was removed, False if it was not found.
+        """
+        if node in self.children:
+            self.children.remove(node)
+            node.parent = None
             return True
         return False
 
-    def remove_parent(self):
-        self._parent = None
-
     @property
     def parent(self) -> Optional['Node']:
+        """Get or set the parent node of this node."""
         return self._parent() if self._parent else None
 
     @parent.setter
     def parent(self, parent: 'Node'):
-        self._parent = weakref.ref(parent)
+        self._parent = weakref.ref(parent) if parent else None
 
     def siblings(self) -> List['Node']:
+        """Get a list of sibling nodes."""
         p = self.parent
         if not p:
             return []
@@ -89,120 +173,129 @@ class Node:
 
     @property
     def is_root(self) -> bool:
+        """Check if this node is the root of the tree.
+
+        A root node is defined as a node that has no parent.
+
+        Returns
+        -------
+        bool
+            True if this node is the root, False otherwise.
+        """
         return self.parent is None
 
     @property
     def is_leaf(self) -> bool:
-        return len(self._children) == 0
-
-    def contains_annotation(self, key: str) -> bool:
-        return key in self._annotations
-
-    def set_annotation(self, key: str, value: Any):
-        self._annotations[key] = value
-
-    def annotation(self, key: str) -> Any:
-        if key not in self._annotations:
-            raise KeyError(f"Key not found: {key}")
-        value = self._annotations[key]
-        return value
-
-    def contains_branch_annotation(self, key: str) -> bool:
-        return key in self._branch_annotations
-
-    def set_branch_annotation(self, key: str, value: Any):
-        self._branch_annotations[key] = value
-
-    def branch_annotation(self, key: str) -> Any:
-        if key not in self._branch_annotations:
-            raise KeyError(f"Key not found: {key}")
-        value = self._branch_annotations[key]
-        return value
-
-    @property
-    def comment(self) -> str:
-        return self._comment
-
-    @comment.setter
-    def comment(self, comment: str):
-        self._comment = comment
-
-    @property
-    def branch_comment(self) -> str:
-        return self._branch_comment
-
-    @branch_comment.setter
-    def branch_comment(self, comment: str):
-        self._branch_comment = comment
-
-    def remove_annotation(self, key: str):
-        if key in self._annotations:
-            del self._annotations[key]
-
-    def clear_annotations(self):
-        self._annotations.clear()
-
-    def annotation_keys(self) -> List[str]:
-        return list(self._annotations.keys())
+        """Check if this node is a leaf node."""
+        return len(self.children) == 0
 
     def make_binary(self) -> bool:
+        """Convert this node into a binary node if it has more than two children.
+        If the node has more than two children, it will create new internal nodes
+        to ensure that each internal node has at most two children. The new nodes
+        will have a distance of 0, and the original children will be moved under
+        these new nodes.
+
+        Returns
+        -------
+        bool
+            True if the node was made binary, False if it was already binary.
+        """
         made_binary = False
-        while self.child_count() > 2:
-            child0 = self._children[0]
-            child1 = self._children[1]
+        while len(self.children) > 2:
+            child0 = self.children[0]
+            child1 = self.children[1]
             self.remove_child(child0)
             self.remove_child(child1)
             new_node = Node()
             new_node.add_child(child0)
             new_node.add_child(child1)
             new_node.distance = 0
-            self._children.insert(0, new_node)
+            self.children.insert(0, new_node)
             new_node.parent = self
             made_binary = True
         return made_binary
 
     def is_binary(self) -> bool:
-        return len(self._children) == 2
+        """Check if this node is binary, meaning it has at most two children.
+
+        Returns
+        -------
+        bool
+            True if the node is binary (has 2 children), False otherwise.
+        """
+        return len(self.children) == 2
 
     @property
     def descendant_bitset(self) -> 'BitSet':
-        if not hasattr(self, '_descendant_bitset'):
+        """Get the BitSet representing all descendants of this node.
+
+        Returns
+        -------
+        BitSet
+            A bitset where each bit represents whether a node is a descendant
+            of this node.
+
+        Raises
+        ------
+        AttributeError
+            If the BitSet has not been computed yet.
+        """
+        if self._descendant_bitset is None:
             raise AttributeError(
                 "BitSet not computed. Call compute_descendant_bitset(size) first."
             )
         return self._descendant_bitset
 
-    def compute_descendant_bitset(self, size) -> None:
+    def compute_descendant_bitset(self, size: int) -> None:
+        """Compute the BitSet of all descendants of this node.
+        This method populates the `_descendant_bitset` attribute with a BitSet
+        that represents all nodes that are descendants of this node.
+        If the node is a leaf, it will set the bit corresponding to its own ID.
+        If the node has children, it will recursively compute the BitSet for each child
+        and combine them into a single BitSet for this node.
+
+        Parameters
+        ----------
+        size
+            The size of the BitSet, which should be the number of taxa in the tree.
+        """
         if self.is_leaf:
             self._descendant_bitset = BitSet(size)
-            self._descendant_bitset[self._id] = True
+            self._descendant_bitset[self.id] = True
         else:
             self._descendant_bitset = BitSet(size)
             for child in self.children:
-                self._descendant_bitset |= child._descendant_bitset
+                self._descendant_bitset |= child.descendant_bitset
 
-    def newick(self, options: Optional[Dict[str, Any]] = None) -> str:
+    def newick(self, **options) -> str:
         """Generate a Newick string representation of the node.
 
         This method constructs a Newick format string for the node and its children,
         including branch lengths and comments if specified in the options.
         The options dictionary can include:
-            - include_branch_lengths (bool): Whether to include branch lengths
-            in the output.
-            - decimal_precision (int): Number of decimal places for branch lengths.
-            - include_internal_node_name (bool): Whether to include internal node names.
-            - translator (Dict[str, str]): A mapping for translating node names.
+
+            - `include_branch_lengths` (bool): Whether to include branch lengths
+              in the output.
+            - `decimal_precision` (int): Number of decimal places for branch lengths.
+            - `include_internal_node_name` (bool): Whether to include internal
+              node names.
+            - `translator` (Dict[str, str]): A mapping for translating node names.
+
         If `translator` is provided, it will be used to translate node names
         in the output.
 
-        Args:
-            options (Optional[Dict[str, Any]], optional): A dictionary of options for
-            formatting the Newick string. If None, defaults will be used.
+        Parameters
+        ----------
+        options
+            A dictionary of options for formatting the Newick string.
+            If None, defaults will be used.
 
-        Returns:
-            str: A Newick formatted string representing the node and its children.
+        Returns
+        -------
+        str
+            A Newick formatted string representing the node and its children.
         """
-        options = options or {}
         include_branch_lengths = options.get("include_branch_lengths", True)
         decimal_precision = options.get("decimal_precision", -1)
         include_internal_node_name = options.get("include_internal_node_name", False)
@@ -230,7 +323,7 @@ class Node:
                 buf.write(comment)
         else:
             buf.write("(")
-            children_strs = [child.newick(options) for child in self.children]
+            children_strs = [child.newick(**options) for child in self.children]
             buf.write(",".join(children_strs))
             buf.write(")")
             comment, branch_comment = self._make_comment_for_newick(options)
@@ -245,22 +338,84 @@ class Node:
                 buf.write(comment)
         return buf.getvalue()
 
-    def parse_comment(self, converters: Dict[str, Any] = None) -> Dict[str, Any]:
-        if not self._comment:
+    def parse_comment(self, converters: Dict[str, Any] = None) -> None:
+        """Parse the comment associated with this node.
+
+        This method extracts annotations from the comment string using the provided
+        converters dictionary, which maps annotation keys to conversion functions.
+
+        Example
+        -------
+        If the comment is ``[&rate=0.01,name=myname]``, and `converters` is::
+
+            {"rate": lambda x: float(x)}
+
+        then this method will return::
+
+            {"rate": 0.01, "name": "myname"}
+
+        Parameters
+        ----------
+        converters
+            A dictionary mapping annotation keys to conversion functions.
+            Defaults to None.
+        """
+        if not self.comment:
             return {}
-        annotations = parse_comment(self._comment, converters)
+        annotations = parse_comment(self.comment, converters)
         if annotations:
-            self._annotations.update(annotations)
-        return annotations
+            self.annotations.update(annotations)
 
     def parse_branch_comment(self, converters: Dict[str, Any] = None) -> None:
-        if not self._branch_comment:
+        """Parse the branch comment associated with this node.
+
+        This method extracts annotations from the comment string using the provided
+        converters dictionary, which maps annotation keys to conversion functions.
+
+        Example
+        -------
+        If the comment is ``[&rate=0.01,name=myname]``, and `converters` is::
+
+            {"rate": lambda x: float(x)}
+
+        then this method will return::
+
+            {"rate": 0.01, "name": "myname"}
+
+        Parameters
+        ----------
+        converters
+            A dictionary mapping annotation keys to conversion functions.
+            Defaults to None.
+        """
+        if not self.branch_comment:
             return {}
-        annotations = parse_comment(self._branch_comment, converters)
+        annotations = parse_comment(self.branch_comment, converters)
         if annotations:
-            self._branch_annotations.update(annotations)
+            self.branch_annotations.update(annotations)
 
     def _make_comment_for_newick(self, options: Dict[str, Any]) -> tuple[str, str]:
+        """Generate comments for Newick output based on options.
+
+        This method builds comments for the node and its branch based on the
+        provided options.
+
+        Parameters
+        ----------
+        options
+            A dictionary of options that may include:
+                - include_comment (bool): Whether to include the node comment.
+                - include_branch_comment (bool): Whether to include the branch comment.
+                - annotation_keys (list): List of keys to include in the node comment.
+                - branch_annotation_keys (list): List of keys to include in the branch
+                  comment.
+
+        Returns
+        -------
+        tuple[str, str]
+            a tuple containing the node comment and branch comment.
+        """
+
         def build_comment(raw_comment, annotations, include_flag, keys_option):
             if options.get(include_flag, False) and raw_comment is not None:
                 return raw_comment
@@ -279,11 +434,11 @@ class Node:
             return ""
 
         comment = build_comment(
-            self._comment, self._annotations, "include_comment", "annotation_keys"
+            self.comment, self.annotations, "include_comment", "annotation_keys"
         )
         branch_comment = build_comment(
-            self._branch_comment,
-            self._branch_annotations,
+            self.branch_comment,
+            self.branch_annotations,
             "include_branch_comment",
             "branch_annotation_keys",
         )
@@ -297,6 +452,16 @@ class Node:
     #         stack.extend(node.children)
 
     def postorder(self) -> Iterator['Node']:
+        """Generate nodes in postorder traversal.
+
+        This method yields nodes in postorder, meaning it visits all children
+        before the parent node.
+
+        Returns
+        -------
+        Iterator[Node]
+            An iterator that yields nodes in postorder.
+        """
         stack = [self]
         out = deque()  # acts like a reverse postorder collector
 
@@ -308,6 +473,16 @@ class Node:
         return iter(out)
 
     def preorder(self) -> Iterator['Node']:
+        """Generate nodes in preorder traversal.
+
+        This method yields nodes in preorder, meaning it visits the parent node
+        before its children.
+
+        Returns
+        -------
+        Iterator[Node]
+            An iterator that yields nodes in preorder.
+        """
         stack = [self]
         while stack:
             node = stack.pop()
@@ -315,6 +490,16 @@ class Node:
             stack.extend(reversed(node.children))
 
     def levelorder(self) -> Iterator['Node']:
+        """Generate nodes in level order traversal.
+
+        This method yields nodes in level order, meaning it visits all nodes at
+        the current level before moving to the next level.
+
+        Returns
+        -------
+        Iterator[Node]
+            An iterator that yields nodes in level order.
+        """
         queue = deque([self])
         while queue:
             node = queue.popleft()
@@ -322,10 +507,32 @@ class Node:
             queue.extend(node.children)
 
     def __repr__(self) -> str:
-        return f"Node(name={self._name}, id={self._id}, distance={self._distance})"
+        return f"Node(name={self.name}, id={self.id}, distance={self.distance})"
 
 
 def parse_comment(comment: str, converters: Dict[str, Any] = None):
+    """Parse a comment string into a dictionary of annotations.
+
+    This function extracts key-value pairs from a comment string formatted as
+    ``[&mean=0.2,hpd={0.1,0.6}]``. It supports nested structures and can
+    handle commas inside brackets. If a key is found in the `converters`
+    dictionary, the corresponding value will be converted using the provided
+    converter function. If no converters are provided, the values will be
+    stored as strings.
+    The comment string should start with ``&`` and end with ``]``, with key-value
+    pairs separated by commas.
+
+    This type of comment is used by BEAST package.
+
+    Parameters
+    ----------
+    comment
+        The comment string to parse, formatted as `[&key1=value1,key2=value2,...]`.
+    converters
+        A dictionary mapping annotation keys to conversion functions. If a key
+        is found in this dictionary, its value will be converted using the
+        corresponding function. If None, values will be stored as strings.
+    """
     annotations: Dict[str, Any] = {}
 
     start = comment.find("&") + 1

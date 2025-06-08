@@ -1,6 +1,8 @@
 # Copyright 2025 Mathieu Fourment
 # SPDX-License-Identifier: MIT
 
+import pytest
+
 from treezy.bitset import BitSet
 
 
@@ -44,7 +46,7 @@ def test_eq():
     assert a != d
 
 
-def test_set_clear_toggle_test():
+def test_set_clear_flip_test():
     b = BitSet(4, 0)
     b.set(1)
     assert b.value == 0b0010
@@ -52,13 +54,14 @@ def test_set_clear_toggle_test():
     assert b.value == 0b1010
     b.clear(1)
     assert b.value == 0b1000
-    b.toggle(0)
+    b.flip(0)
     assert b.value == 0b1001
-    b.toggle(3)
+    b.flip(3)
     assert b.value == 0b0001
     assert b.test(0) is True
     assert b.test(1) is False
-    assert b.test(4) is False  # out of range
+    with pytest.raises(IndexError):
+        assert b.test(4) is False  # out of range
 
 
 def test_count_to_list():
@@ -80,15 +83,5 @@ def test_getitem_setitem():
 
 
 def test_size_zero():
-    b = BitSet(0)
-    assert b.size == 0
-    assert b.value == 0
-    b.set(0)
-    assert b.value == 0
-    b.clear(0)
-    assert b.value == 0
-    b.toggle(0)
-    assert b.value == 0
-    assert b.test(0) is False
-    assert b.count() == 0
-    assert b.to_list() == []
+    with pytest.raises(ValueError):
+        BitSet(0)

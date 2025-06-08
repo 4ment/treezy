@@ -14,7 +14,7 @@ def test_create_tree_from_newick():
     assert tree.leaf_node_count == 3
     assert tree.internal_node_count == 2
     assert tree.root.name is None
-    assert tree.is_rooted()
+    assert tree.is_rooted
 
 
 def test_compare_taxon_names():
@@ -56,9 +56,9 @@ def test_create_tree_from_newick_with_comments():
     assert tree.leaf_node_count == 3
     assert tree.internal_node_count == 2
     assert tree.root.name is None
-    assert tree.is_rooted()
-    assert tree.root.child_at(0).contains_annotation("key")
-    assert tree.root.child_at(1).contains_branch_annotation("a")
+    assert tree.is_rooted
+    assert tree.root.child_at(0).annotations["key"]
+    assert "a" in tree.root.child_at(1).branch_annotations
 
 
 def test_reroot_tree():
@@ -66,9 +66,9 @@ def test_reroot_tree():
     taxon_names = ["A", "B", "C"]
     tree = Tree.from_newick(newick, taxon_names)
 
-    assert not tree.is_rooted()
+    assert not tree.is_rooted
     assert tree.make_rooted()
-    assert tree.is_rooted()
+    assert tree.is_rooted
     assert not tree.make_rooted()
 
 
@@ -94,21 +94,21 @@ def test_newick_export():
 
     options = {"annotation_keys": ["a"]}
     tree.node_from_id(0).parse_comment()
-    assert tree.newick(options) == "((A[&a=b]:0.1,B:0.2):0.3,C:2.0);"
+    assert tree.newick(**options) == "((A[&a=b]:0.1,B:0.2):0.3,C:2.0);"
 
     options["branch_annotation_keys"] = ["cat"]
-    tree.node_from_id(1).parse_branch_comment()
-    assert tree.newick(options) == "((A[&a=b]:0.1,B:[&cat=1]0.2):0.3,C:2.0);"
+    tree.leaf_from_name('B').parse_branch_comment()
+    assert tree.newick(**options) == "((A[&a=b]:0.1,B:[&cat=1]0.2):0.3,C:2.0);"
 
     options = {"annotation_keys": ["key"]}
-    tree.root.child_at(0).set_annotation("key", "value")
-    assert tree.newick(options) == "((A:0.1,B:0.2)[&key=value]:0.3,C:2.0);"
+    tree.root.child_at(0).annotations["key"] = "value"
+    assert tree.newick(**options) == "((A:0.1,B:0.2)[&key=value]:0.3,C:2.0);"
 
     options = {"include_comment": True}
-    assert tree.newick(options) == "((A[&a=b]:0.1,B:0.2):0.3,C:2.0);"
+    assert tree.newick(**options) == "((A[&a=b]:0.1,B:0.2):0.3,C:2.0);"
 
     options = {"decimal_precision": 2}
-    assert tree.newick(options) == "((A:0.10,B:0.20):0.30,C:2.00);"
+    assert tree.newick(**options) == "((A:0.10,B:0.20):0.30,C:2.00);"
 
     newick = "((A,B),C);"
     taxon_names = ["A", "B", "C"]
@@ -165,8 +165,16 @@ def test_parse_comment():
         node.parse_comment(converters)
 
     child = tree.root.child_at(0)
-    assert child.contains_annotation("key")
-    assert child.annotation("key") == "value"
+    assert "key" not in child.branch_annotations
+    assert "key" in child.annotations
+    assert child.annotations["key"] == "value"
+    del child.annotations["key"]
+    assert "key" not in child.annotations
+    child.annotations["key"] = "new_value"
+    assert child.annotations["key"] == "new_value"
+
+    child.branch_annotations["branch key"] = "value"
+    assert "branch key" not in child.annotations
 
 
 def test_reroot_above():
@@ -220,7 +228,7 @@ def test_height_to_distance():
     for node in tree.postorder():
         if not node.is_root:
             node.parse_branch_comment({"rate": lambda rate: float(rate)})
-            node.distance *= node.branch_annotation('rate')
+            node.distance *= node.branch_annotations['rate']
 
     options = {"decimal_precision": 1}
-    assert tree.newick(options) == '((A:0.1,B:0.4):0.3,C:1.6);'
+    assert tree.newick(**options) == '((A:0.1,B:0.4):0.3,C:1.6);'

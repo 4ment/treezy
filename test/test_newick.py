@@ -11,8 +11,8 @@ from treezy.newick import NewickReader
 def test_newickreader_count_trees():
     data = "(A,B);\n(C,D);\n"
     f = io.StringIO(data)
-    nf = NewickReader(f)
-    assert nf.count_trees() == 2
+    with NewickReader(f) as nf:
+        assert nf.count_trees() == 2
 
 
 def test_newickreader_parse():
@@ -21,6 +21,8 @@ def test_newickreader_parse():
     f = io.StringIO(data)
     nf = NewickReader(f, taxa_names)
     trees = nf.parse()
+    nf.close()
+    nf.close()  # Should not raise
     assert trees[0].taxon_names == taxa_names
     assert trees[1].taxon_names == taxa_names
     assert trees[0].newick() == "(A,B);"
@@ -42,6 +44,7 @@ def test_newickreader_next_and_has_next():
     assert t2.taxon_names == taxa_names == ["A", "B"]
     assert not nf.has_next()
     assert nf.next() is None
+    nf.close()
 
 
 def test_newickreader_skip_next():
@@ -58,11 +61,11 @@ def test_newickreader_skip_next():
 
 def test_newickreader_empty():
     f = io.StringIO("")
-    nf = NewickReader(f)
-    assert nf.count_trees() == 0
-    assert nf.parse() == []
-    assert not nf.has_next()
-    assert nf.next() is None
+    with NewickReader(f) as nf:
+        assert nf.count_trees() == 0
+        assert nf.parse() == []
+        assert not nf.has_next()
+        assert nf.next() is None
 
 
 def test_newickreader_non_tree_lines():
@@ -73,12 +76,14 @@ def test_newickreader_non_tree_lines():
     trees = nf.parse()
     assert trees[0].newick() == "(A,B);"
     assert trees[1].newick() == "(B,A);"
+    nf.close()
 
 
 def test_newickreader_skip_next_on_empty():
     f = io.StringIO("")
     nf = NewickReader(f)
     nf.skip_next()  # Should not raise
+    nf.close()
 
 
 def test_newickreader_skip_next_multiple():
@@ -91,6 +96,7 @@ def test_newickreader_skip_next_multiple():
     t = nf.next()
     assert t.newick() == "(B,A);"
     assert not nf.has_next()
+    nf.close()
 
 
 def test_newickreader_raise_on_different_taxa():
