@@ -2,7 +2,7 @@
 # SPDX-License-Identifier: MIT
 
 
-from typing import List
+from typing import List, Union
 
 
 class BitSet:
@@ -210,7 +210,7 @@ class BitSet:
         """
         return self.test(pos)
 
-    def __setitem__(self, pos: int, val: int | bool) -> None:
+    def __setitem__(self, pos: int, val: Union[int, bool]) -> None:
         """Set the value of the bit at the given position.
 
         Parameters

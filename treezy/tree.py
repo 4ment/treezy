@@ -2,10 +2,10 @@
 # SPDX-License-Identifier: MIT
 
 import copy
+import difflib
 from random import choice
 from typing import Any, Dict, Iterator, List, Optional
 
-# from treezy.newick import tokenize_newick
 from treezy.node import Node
 
 
@@ -172,6 +172,24 @@ class Tree:
         """Check if the tree is rooted."""
         return len(self._root.children) == 2
 
+    def make_unrooted(self) -> bool:
+        """Make the tree unrooted if it is rooted.
+
+        Returns
+        -------
+        bool
+        True if the tree was rooted and has been made unrooted, False otherwise.
+        """
+        degree = len(self._root.children)
+        if degree == 2:
+            # leaves cannot be collapsed
+            if self._root.children[0].is_leaf:
+                self._root.children[1].collapse()
+            else:
+                self._root.children[0].collapse()
+            self.update_ids()
+        return degree == 2
+
     def make_rooted(self) -> bool:
         """Make the tree rooted if it is not already.
 
@@ -287,6 +305,40 @@ class Tree:
 
             self._root = new_root
             self.update_ids()
+
+    def parse_branch_comment(self, converters: Dict[str, Any] = None) -> None:
+        """Parse branch comments for all nodes in the tree.
+
+        This method iterates through all nodes in the tree and parses their branch
+        comments into structured annotations. It uses the provided converters to
+        convert the comment strings into appropriate data types.
+
+        Parameters
+        ----------
+        converters
+            A dictionary of converters to apply to the branch comments. The keys are
+            the names of the annotations, and the values are functions that convert
+            the comment strings into the desired data type.
+        """
+        for node in self._nodes:
+            node.parse_branch_comment(converters)
+
+    def parse_comment(self, converters: Dict[str, Any] = None) -> None:
+        """Parse comments for all nodes in the tree.
+
+        This method iterates through all nodes in the tree and parses their comments
+        into structured annotations. It uses the provided converters to convert the
+        comment strings into appropriate data types.
+
+        Parameters
+        ----------
+        converters
+            A dictionary of converters to apply to the comments. The keys are the names
+            of the annotations, and the values are functions that convert the comment
+            strings into the desired data type.
+        """
+        for node in self._nodes:
+            node.parse_comment(converters)
 
     def update_ids(self):
         """Update the IDs of the nodes in the tree based on the taxon names.
@@ -479,14 +531,21 @@ class Tree:
         elif len(taxon_names) == 0:
             taxon_names.extend(current_taxon_names)
         elif set(taxon_names) != set(current_taxon_names):
-            missing = set(current_taxon_names) - set(taxon_names)
-            extra = set(taxon_names) - set(current_taxon_names)
-            if missing:
-                print(f"Missing taxon names: {missing}")
-            if extra:
-                print(f"Extra taxon names: {extra}")
+            mismatches = []
+            for name in current_taxon_names:
+                if name not in taxon_names:
+                    close = difflib.get_close_matches(
+                        name, taxon_names, n=1, cutoff=0.7
+                    )
+                    if close:
+                        mismatches.append(f"{name} (did you mean {close[0]})")
+                    else:
+                        mismatches.append(f"{name} (no close match found)")
+
+            mismatch_report = "\n".join(mismatches)
             raise ValueError(
-                "Provided taxon names do not match those in the Newick string."
+                f"Provided taxon names do not match those in the Newick string.\n"
+                f"Possible issues:\n{mismatch_report}"
             )
 
         root = stack[0] if stack else None
@@ -520,6 +579,7 @@ class Tree:
             new_node.add_child(nodes[index2])
             nodes.append(new_node)
             nodes.pop(max(index1, index2))
+            nodes.pop(min(index1, index2))
         return cls(nodes[0], taxon_names)
 
     def postorder(self) -> Iterator['Node']:

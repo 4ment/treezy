@@ -189,6 +189,20 @@ class Node:
         """Check if this node is a leaf node."""
         return len(self.children) == 0
 
+    def collapse(self) -> None:
+        """Collapse this node into its parent.
+
+        This method removes this node from its parent's children and adds all
+        of its children to the parent. After this operation, this node will no
+        longer be part of the tree, and its children will be directly under
+        its parent.
+        """
+        parent = self.parent
+        parent.remove_child(self)
+        for child in self.children:
+            parent.add_child(child)
+        self.children.clear()
+
     def make_binary(self) -> bool:
         """Convert this node into a binary node if it has more than two children.
         If the node has more than two children, it will create new internal nodes
@@ -360,11 +374,10 @@ class Node:
             A dictionary mapping annotation keys to conversion functions.
             Defaults to None.
         """
-        if not self.comment:
-            return {}
-        annotations = parse_comment(self.comment, converters)
-        if annotations:
-            self.annotations.update(annotations)
+        if self.comment is not None:
+            annotations = parse_comment(self.comment, converters)
+            if annotations:
+                self.annotations.update(annotations)
 
     def parse_branch_comment(self, converters: Dict[str, Any] = None) -> None:
         """Parse the branch comment associated with this node.
@@ -388,11 +401,10 @@ class Node:
             A dictionary mapping annotation keys to conversion functions.
             Defaults to None.
         """
-        if not self.branch_comment:
-            return {}
-        annotations = parse_comment(self.branch_comment, converters)
-        if annotations:
-            self.branch_annotations.update(annotations)
+        if self.branch_comment is not None:
+            annotations = parse_comment(self.branch_comment, converters)
+            if annotations:
+                self.branch_annotations.update(annotations)
 
     def _make_comment_for_newick(self, options: Dict[str, Any]) -> tuple[str, str]:
         """Generate comments for Newick output based on options.
