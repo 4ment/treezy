@@ -2,7 +2,7 @@
 # SPDX-License-Identifier: MIT
 
 from abc import ABC, abstractmethod
-from typing import Set
+from typing import Union
 
 from treezy.tree import Tree
 
@@ -38,25 +38,48 @@ class RobinsonFouldsMetric(TreeMetric):
        2 \cdot | \mathcal{B}(T_1) \cap \mathcal{B}(T_2) |.
     """
 
-    def compute_from_sets(self, set1: Set, set2: Set) -> float:
-        """Compute the Robinson-Foulds distance from two sets of splits.
-
+    def __init__(self, weighted: bool = False):
+        """Initializes a RobinsonFouldsMetric.
 
         Parameters
         ----------
-        set1
-            Set of splits from the first tree.
-        set2
-            Set of splits from the second tree.
+        weighted
+            If True, the distance is weighted by the branch lengths of the splits.
+        """
+        super().__init__()
+        self._weighted = weighted
+
+    def compute_from_splits(
+        self, splits1: Union[dict, set], splits2: Union[dict, set]
+    ) -> float:
+        """Compute the Robinson-Foulds distance from two collections of splits.
+
+        If the splits are sets, they are treated as unweighted.
+        If they are dictionaries, the values are treated as weights for the splits.
+
+        Parameters
+        ----------
+        splits1
+            splits from the first tree.
+        splits2
+            splits from the second tree.
 
         Returns
         -------
         float
-            The Robinson-Foulds distance between the two sets.
+            The Robinson-Foulds distance between the two collections of splits.
         """
-        shared = len(set1 & set2)
-        total = len(set1) + len(set2)
-        return float(total - 2 * shared)
+        if isinstance(splits1, set):
+            return float(len(splits1 ^ splits2))
+        elif isinstance(splits1, dict):
+            return float(
+                sum(
+                    abs(splits1.get(s, 0.0) - splits2.get(s, 0.0))
+                    for s in set(splits1.keys()).union(splits2.keys())
+                )
+            )
+        else:
+            raise ValueError("splits1 and splits2 must be either sets or dictionaries.")
 
     def compute(self, tree1: Tree, tree2: Tree) -> float:
         """Compute the Robinson-Foulds distance between two trees.
@@ -80,10 +103,57 @@ class RobinsonFouldsMetric(TreeMetric):
         float
             The Robinson-Foulds distance between the two trees.
         """
-        set1 = {
-            n.descendant_bitset for n in tree1.nodes if not n.is_leaf and not n.is_root
-        }
-        set2 = {
-            n.descendant_bitset for n in tree2.nodes if not n.is_leaf and not n.is_root
-        }
-        return self.compute_from_sets(set1, set2)
+        if tree1.is_rooted != tree2.is_rooted:
+            raise ValueError("Both trees must be either rooted or unrooted.")
+
+        if tree1.is_rooted:
+            if not self._weighted:
+                splits1 = {
+                    n.descendant_bitset.value
+                    for n in tree1.nodes
+                    if not n.is_leaf and not n.is_root
+                }
+                splits2 = {
+                    n.descendant_bitset.value
+                    for n in tree2.nodes
+                    if not n.is_leaf and not n.is_root
+                }
+            else:
+                splits1 = {
+                    n.descendant_bitset.value: n.distance
+                    for n in tree1.nodes
+                    if not n.is_leaf and not n.is_root
+                }
+                splits2 = {
+                    n.descendant_bitset.value: n.distance
+                    for n in tree2.nodes
+                    if not n.is_leaf and not n.is_root
+                }
+        else:
+            if not self._weighted:
+                splits1 = {
+                    frozenset((n.descendant_bitset.value, (~n.descendant_bitset).value))
+                    for n in tree1.nodes
+                    if not n.is_leaf and not n.is_root
+                }
+                splits2 = {
+                    frozenset((n.descendant_bitset.value, (~n.descendant_bitset).value))
+                    for n in tree2.nodes
+                    if not n.is_leaf and not n.is_root
+                }
+            else:
+                splits1 = {
+                    frozenset(
+                        (n.descendant_bitset.value, (~n.descendant_bitset).value)
+                    ): n.distance
+                    for n in tree1.nodes
+                    if not n.is_leaf and not n.is_root
+                }
+                splits2 = {
+                    frozenset(
+                        (n.descendant_bitset.value, (~n.descendant_bitset).value)
+                    ): n.distance
+                    for n in tree2.nodes
+                    if not n.is_leaf and not n.is_root
+                }
+        return self.compute_from_splits(splits1, splits2)
