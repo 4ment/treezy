@@ -89,7 +89,7 @@ class Node:
 
         copied.children = [copy.deepcopy(child, memo) for child in self.children]
         for child in copied.children:
-            child._parent = copied
+            child._parent = weakref.ref(copied)
 
         return copied
 
@@ -158,7 +158,7 @@ class Node:
     @property
     def parent(self) -> Optional['Node']:
         """Get or set the parent node of this node."""
-        return self._parent() if self._parent else None
+        return self._parent() if self._parent is not None else None
 
     @parent.setter
     def parent(self, parent: 'Node'):
@@ -198,6 +198,8 @@ class Node:
         its parent.
         """
         parent = self.parent
+        siblings = self.siblings()
+        siblings[0].distance = (siblings[0].distance or 0) + (self.distance or 0)
         parent.remove_child(self)
         for child in self.children:
             parent.add_child(child)
