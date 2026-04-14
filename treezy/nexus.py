@@ -1,8 +1,8 @@
-# Copyright 2025 Mathieu Fourment
+# Copyright 2026 Mathieu Fourment
 # SPDX-License-Identifier: MIT
 
 import re
-from typing import IO, List, Optional, Union
+from typing import IO, Optional, Union
 
 from treezy.tree import Tree
 from treezy.treeio import TreeReader, TreeWriter
@@ -56,7 +56,7 @@ class NexusReader(TreeReader):
     def __init__(
         self,
         path_or_stream: Union[str, IO],
-        taxon_names: Optional[List[str]] = None,
+        taxon_names: Optional[list[str]] = None,
         **options,
     ):
         """Initializes a NexusReader instance.
@@ -415,7 +415,7 @@ class NexusWriter(TreeWriter):
         self._out_stream.write("End;\n")
 
     @staticmethod
-    def write_translate_and_map(writer, taxon_names: List[str]) -> dict:
+    def write_translate_and_map(writer, taxon_names: list[str]) -> dict:
         """Writes the ``Translate`` block to the Nexus file.
 
         The translate block maps taxon names to their indices (starting from 1)
@@ -444,7 +444,7 @@ class NexusWriter(TreeWriter):
         writer.write(",\n".join(translate_list) + ";\n")
         return translate_taxa
 
-    def write_taxa_block(self, taxon_names: List[str]) -> None:
+    def write_taxa_block(self, taxon_names: list[str]) -> None:
         """Writes the ``Taxa`` block to the Nexus file.
 
         Parameters
@@ -457,7 +457,7 @@ class NexusWriter(TreeWriter):
         self._out_stream.write("  Taxlabels " + " ".join(taxon_names) + ";")
         self._out_stream.write("End;")
 
-    def write_translate(self, taxon_names: List[str]) -> None:
+    def write_translate(self, taxon_names: list[str]) -> None:
         """Writes the ``Translate`` block to the Nexus file.
 
         The translate block maps taxon names to their indices (starting from 1)
@@ -481,7 +481,7 @@ class NexusWriter(TreeWriter):
         )
         self._translate_written = True
 
-    def write(self, trees: Union[Tree, List[Tree]]) -> None:
+    def write(self, trees: Union[Tree, list[Tree]]) -> None:
         """Writes trees in Nexus format to the output stream.
 
         This method writes a single tree or a list of trees in Nexus format,
@@ -519,7 +519,7 @@ class NexusWriter(TreeWriter):
 
     @classmethod
     def save(
-        cls, path_or_stream: Union[str, IO], trees: Union[Tree, List[Tree]], **options
+        cls, path_or_stream: Union[str, IO], trees: Union[Tree, list[Tree]], **options
     ):
         """Saves trees in Nexus format to the specified path.
 

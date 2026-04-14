@@ -1,7 +1,7 @@
-# Copyright 2025 Mathieu Fourment
+# Copyright 2026 Mathieu Fourment
 # SPDX-License-Identifier: MIT
 
-from typing import IO, List, Optional, Union
+from typing import IO, Optional, Union
 
 from treezy.tree import Tree
 from treezy.treeio import TreeReader
@@ -32,7 +32,7 @@ class NewickReader(TreeReader):
     def __init__(
         self,
         path_or_stream: Union[str, IO],
-        taxon_names: Optional[List[str]] = None,
+        taxon_names: Optional[list[str]] = None,
         **options,
     ):
         """Initializes the NewickReader with a file path or an IO stream.

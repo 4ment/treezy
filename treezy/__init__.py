@@ -1,5 +1,11 @@
-# Copyright 2025 Mathieu Fourment
+# Copyright 2026 Mathieu Fourment
 # SPDX-License-Identifier: MIT
+
+"""Simple library for manipulating phylogenetic trees.
+
+This package provides tools for working with phylogenetic trees, including
+parsing, manipulation, and comparison operations.
+"""
 
 __version__ = "0.0.1"
 

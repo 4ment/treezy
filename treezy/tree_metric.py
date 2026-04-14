@@ -1,4 +1,4 @@
-# Copyright 2025 Mathieu Fourment
+# Copyright 2026 Mathieu Fourment
 # SPDX-License-Identifier: MIT
 
 from abc import ABC, abstractmethod

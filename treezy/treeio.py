@@ -1,8 +1,8 @@
-# Copyright 2025 Mathieu Fourment
+# Copyright 2026 Mathieu Fourment
 # SPDX-License-Identifier: MIT
 
 from abc import ABC, abstractmethod
-from typing import IO, List, Optional, Union
+from typing import IO, Optional, Union
 
 from treezy.tree import Tree
 
@@ -16,7 +16,7 @@ class TreeReader(ABC):
     """
 
     def __init__(
-        self, path_or_stream: Union[str, IO], taxon_names: Optional[List[str]] = None
+        self, path_or_stream: Union[str, IO], taxon_names: Optional[list[str]] = None
     ):
         """Initializes the TreeReader with a file path or an IO stream.
 
@@ -102,7 +102,7 @@ class TreeReader(ABC):
         If there are no more trees, it does nothing.
         """
 
-    def parse(self) -> List[Tree]:
+    def parse(self) -> list[Tree]:
         """Parses all trees from the input stream.
 
         This method reads through the input stream and returns a list of
@@ -110,7 +110,7 @@ class TreeReader(ABC):
 
         Returns
         -------
-        List[Tree]
+        list[Tree]
             a list of Tree objects parsed from the input stream.
         """
         trees = []
@@ -170,7 +170,7 @@ class TreeWriter(ABC):
         self._out_stream.write(string + "\n")
 
     @abstractmethod
-    def write(self, trees: Union[Tree, List[Tree]]):
+    def write(self, trees: Union[Tree, list[Tree]]):
         """Writes one or more trees to the output stream.
 
         Parameters
@@ -182,7 +182,7 @@ class TreeWriter(ABC):
     @classmethod
     @abstractmethod
     def save(
-        cls, path_or_stream: Union[str, IO], trees: Union[Tree, List[Tree]], **options
+        cls, path_or_stream: Union[str, IO], trees: Union[Tree, list[Tree]], **options
     ):
         """Saves one or more trees to a file or stream.
 

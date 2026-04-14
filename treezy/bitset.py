@@ -1,8 +1,8 @@
-# Copyright 2025 Mathieu Fourment
+# Copyright 2026 Mathieu Fourment
 # SPDX-License-Identifier: MIT
 
 
-from typing import List, Union
+from typing import Optional, Union
 
 
 class BitSet:
@@ -37,7 +37,7 @@ class BitSet:
     size: int
     value: int
 
-    def __init__(self, size: int = 0, value: int = 0):
+    def __init__(self, size: int = 0, value: int = 0) -> None:
         """Initialize a BitSet with a given size and value.
 
         Parameters
@@ -52,38 +52,38 @@ class BitSet:
         self.size = size
         self.value = value & ((1 << size) - 1) if size > 0 else value
 
-    def __repr__(self):
+    def __repr__(self) -> str:
         return f"BitSet(size={self.size}, value={bin(self.value)})"
 
     def __str__(self) -> str:
-        return ''.join(str((self.value >> i) & 1) for i in range(self.size))
+        return "".join(str((self.value >> i) & 1) for i in range(self.size))
 
-    def __and__(self, other):
+    def __and__(self, other: "BitSet") -> "BitSet":
         size = max(self.size, other.size)
         return BitSet(size, self.value & other.value)
 
-    def __or__(self, other):
+    def __or__(self, other: "BitSet") -> "BitSet":
         size = max(self.size, other.size)
         return BitSet(size, self.value | other.value)
 
-    def __xor__(self, other):
+    def __xor__(self, other: "BitSet") -> "BitSet":
         size = max(self.size, other.size)
         return BitSet(size, self.value ^ other.value)
 
-    def __invert__(self):
+    def __invert__(self) -> "BitSet":
         mask = (1 << self.size) - 1
         return BitSet(self.size, ~self.value & mask)
 
-    def __lshift__(self, n):
+    def __lshift__(self, n: int) -> "BitSet":
         return BitSet(self.size, (self.value << n) & ((1 << self.size) - 1))
 
-    def __rshift__(self, n):
+    def __rshift__(self, n: int) -> "BitSet":
         return BitSet(self.size, self.value >> n)
 
-    def __eq__(self, other):
+    def __eq__(self, other: "BitSet") -> bool:
         return self.size == other.size and self.value == other.value
 
-    def __hash__(self):
+    def __hash__(self) -> int:
         return hash((self.size, self.value))
 
     def __len__(self) -> int:
@@ -128,7 +128,7 @@ class BitSet:
         else:
             raise IndexError(f"Position out of range ({pos} >= {self.size})")
 
-    def flip(self, pos: int = None) -> None:
+    def flip(self, pos: Optional[int] = None) -> None:
         """Flip the bit at the given position or all bits if pos is None.
 
         Parameters
@@ -180,12 +180,12 @@ class BitSet:
         """
         return bin(self.value).count('1')
 
-    def to_list(self) -> List[int]:
+    def to_list(self) -> list[int]:
         """Convert the bitset to a list of bits.
 
         Returns
         -------
-        List[int]
+        list[int]
             A list of bits (0 or 1) representing the bitset.
         """
         return [(self.value >> i) & 1 for i in range(self.size)]

@@ -1,11 +1,11 @@
-# Copyright 2025 Mathieu Fourment
+# Copyright 2026 Mathieu Fourment
 # SPDX-License-Identifier: MIT
 
 import copy
 import weakref
 from collections import deque
 from io import StringIO
-from typing import Any, Dict, Iterator, List, Optional
+from typing import Any, Iterator, Optional
 
 from treezy.bitset import BitSet
 
@@ -49,10 +49,10 @@ class Node:
     name: Optional[str]
     id: int
     _parent: Optional[weakref.ReferenceType['Node']]
-    children: List['Node']
+    children: list['Node']
     distance: Optional[float]
-    annotations: Dict[str, Any]
-    branch_annotations: Dict[str, Any]
+    annotations: dict[str, Any]
+    branch_annotations: dict[str, Any]
     comment: Optional[str]
     branch_comment: Optional[str]
     _descendant_bitset: Optional[BitSet]
@@ -96,7 +96,7 @@ class Node:
     def __getitem__(self, index: int) -> 'Node':
         return self.children[index]
 
-    def __iter__(self):
+    def __iter__(self) -> Iterator['Node']:
         return iter(self.children)
 
     def __contains__(self, node: 'Node') -> bool:
@@ -164,7 +164,7 @@ class Node:
     def parent(self, parent: 'Node'):
         self._parent = weakref.ref(parent) if parent else None
 
-    def siblings(self) -> List['Node']:
+    def siblings(self) -> list['Node']:
         """Get a list of sibling nodes."""
         p = self.parent
         if not p:
@@ -296,7 +296,7 @@ class Node:
             - `decimal_precision` (int): Number of decimal places for branch lengths.
             - `include_internal_node_name` (bool): Whether to include internal
               node names.
-            - `translator` (Dict[str, str]): A mapping for translating node names.
+            - `translator` (dict[str, str]): A mapping for translating node names.
 
         If `translator` is provided, it will be used to translate node names
         in the output.
@@ -354,7 +354,7 @@ class Node:
                 buf.write(comment)
         return buf.getvalue()
 
-    def parse_comment(self, converters: Dict[str, Any] = None) -> None:
+    def parse_comment(self, converters: dict[str, Any] = None) -> None:
         """Parse the comment associated with this node.
 
         This method extracts annotations from the comment string using the provided
@@ -381,7 +381,7 @@ class Node:
             if annotations:
                 self.annotations.update(annotations)
 
-    def parse_branch_comment(self, converters: Dict[str, Any] = None) -> None:
+    def parse_branch_comment(self, converters: dict[str, Any] = None) -> None:
         """Parse the branch comment associated with this node.
 
         This method extracts annotations from the comment string using the provided
@@ -408,7 +408,7 @@ class Node:
             if annotations:
                 self.branch_annotations.update(annotations)
 
-    def _make_comment_for_newick(self, options: Dict[str, Any]) -> tuple[str, str]:
+    def _make_comment_for_newick(self, options: dict[str, Any]) -> tuple[str, str]:
         """Generate comments for Newick output based on options.
 
         This method builds comments for the node and its branch based on the
@@ -457,13 +457,6 @@ class Node:
             "branch_annotation_keys",
         )
         return comment, branch_comment
-
-    # def postorder(self) -> Iterator['Node']:
-    #     stack = deque([self])
-    #     while stack:
-    #         node = stack.pop()
-    #         yield node
-    #         stack.extend(node.children)
 
     def postorder(self) -> Iterator['Node']:
         """Generate nodes in postorder traversal.
@@ -524,7 +517,7 @@ class Node:
         return f"Node(name={self.name}, id={self.id}, distance={self.distance})"
 
 
-def parse_comment(comment: str, converters: Dict[str, Any] = None):
+def parse_comment(comment: str, converters: dict[str, Any] = None):
     """Parse a comment string into a dictionary of annotations.
 
     This function extracts key-value pairs from a comment string formatted as
@@ -547,7 +540,7 @@ def parse_comment(comment: str, converters: Dict[str, Any] = None):
         is found in this dictionary, its value will be converted using the
         corresponding function. If None, values will be stored as strings.
     """
-    annotations: Dict[str, Any] = {}
+    annotations: dict[str, Any] = {}
 
     start = comment.find("&") + 1
     end = comment.rfind("]")
