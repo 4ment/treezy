@@ -1,7 +1,8 @@
 # Copyright 2026 Mathieu Fourment
 # SPDX-License-Identifier: MIT
 
-from typing import Generator, NamedTuple
+from collections.abc import Generator
+from typing import NamedTuple
 
 
 class Token(NamedTuple):

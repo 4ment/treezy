@@ -76,9 +76,9 @@ class NewickReader(TreeReader):
     def next(self) -> Optional[Tree]:
         if self.has_next():
             tree = Tree.from_newick(self._buffer, self.taxon_names, **self._options)
-            assert isinstance(
-                tree, Tree
-            ), f"Parsed object is not a Tree instance {self._buffer}"
+            assert isinstance(tree, Tree), (
+                f"Parsed object is not a Tree instance {self._buffer}"
+            )
             self._buffer = None
             return tree
         else:

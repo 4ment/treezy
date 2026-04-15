@@ -103,5 +103,5 @@ def test_newickreader_raise_on_different_taxa():
     data = "(A,B);\n(C,A);"
     f = io.StringIO(data)
     nf = NewickReader(f)
-    with pytest.raises(Exception):
+    with pytest.raises(ValueError):
         nf.parse()

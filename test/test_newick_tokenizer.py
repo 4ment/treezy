@@ -32,6 +32,6 @@ def test_tokenize_newick_with_comments():
         Token(type='SEMICOLON', value=';'),
     ]
     for idx, token in enumerate(tokens):
-        assert (
-            token == expected[idx]
-        ), f"Token mismatch at index {idx}: expected {expected[idx]}, got {token}"
+        assert token == expected[idx], (
+            f"Token mismatch at index {idx}: expected {expected[idx]}, got {token}"
+        )

@@ -34,7 +34,7 @@ class TreeReader(ABC):
             if path_or_stream is neither a string nor an IO stream.
         """
         if isinstance(path_or_stream, str):
-            self.in_stream = open(path_or_stream, 'r')
+            self.in_stream = open(path_or_stream)
             self._path = path_or_stream
         # duck-typing to check if it has a 'readline' method
         elif hasattr(path_or_stream, 'readline'):

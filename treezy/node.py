@@ -4,8 +4,9 @@
 import copy
 import weakref
 from collections import deque
+from collections.abc import Iterator
 from io import StringIO
-from typing import Any, Iterator, Optional
+from typing import Any, Optional
 
 from treezy.bitset import BitSet
 
@@ -315,7 +316,7 @@ class Node:
         include_branch_lengths = options.get("include_branch_lengths", True)
         decimal_precision = options.get("decimal_precision", -1)
         include_internal_node_name = options.get("include_internal_node_name", False)
-        translator = options.get("translator", None)
+        translator = options.get("translator")
 
         def format_distance(dist):
             if decimal_precision > 0:
@@ -556,12 +557,15 @@ def parse_comment(comment: str, converters: dict[str, Any] = None):
         for char in s:
             if char in '[{':
                 stack.append(char)
-            elif char in ']}':
-                if stack and (
+            elif (
+                char in ']}'
+                and stack
+                and (
                     (char == ']' and stack[-1] == '[')
                     or (char == '}' and stack[-1] == '{')
-                ):
-                    stack.pop()
+                )
+            ):
+                stack.pop()
             if char == ',' and not stack:
                 result.append(''.join(buffer).strip())
                 buffer = []

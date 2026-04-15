@@ -439,7 +439,7 @@ class NexusWriter(TreeWriter):
         translate_list = []
         translate_taxa = {}
         for idx, taxon in enumerate(taxon_names):
-            translate_list.append(f"  {idx+1} {taxon}")
+            translate_list.append(f"  {idx + 1} {taxon}")
             translate_taxa[taxon] = str(idx + 1)
         writer.write(",\n".join(translate_list) + ";\n")
         return translate_taxa
@@ -570,10 +570,8 @@ class NexusWriter(TreeWriter):
                 f, trees[0].taxon_names
             )
 
-        tree_counter = 0
-        for tree in trees:
-            tree_counter += 1
-            name = f"{tree_prefix}{tree_counter}"
+        for i, tree in enumerate(trees):
+            name = f"{tree_prefix}{i + 1}"
             newick = tree.newick(**newick_options)
             rooting = 'R' if tree.is_rooted else 'U'
             f.write(f"tree {name} ")

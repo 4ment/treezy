@@ -21,9 +21,9 @@ def make_nexus(trees, translate=None, taxa=None, comments=None):
             translate_map[name] = sh
     for i, t in enumerate(trees):
         if comments:
-            lines.append(f"  tree tree{i+1} {comments[i]}= {t}")
+            lines.append(f"  tree tree{i + 1} {comments[i]}= {t}")
         else:
-            lines.append(f"  tree tree{i+1} = {t}")
+            lines.append(f"  tree tree{i + 1} = {t}")
     lines.append("End;")
     if taxa:
         lines.insert(1, "Begin taxa;")
@@ -131,7 +131,7 @@ def test_nexusreader_raise_on_different_taxa():
     f = io.StringIO(data)
     nf = NexusReader(f)
     assert nf.count_trees() == 2
-    with pytest.raises(Exception):
+    with pytest.raises(ValueError):
         nf.parse()
     nf.close()
 

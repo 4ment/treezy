@@ -38,11 +38,41 @@ testpaths = [
     "treezy"
 ]
 
-[tool.black]
-skip-string-normalization = true
+[tool.ruff]
+line-length = 88
+target-version = "py39"
 
-[tool.isort]
-profile = "black"
+# Enable formatter + linter
+fix = true
+
+# Files to lint
+src = ["treezy", "tests"]
+
+[tool.ruff.lint]
+# Rule sets to enable
+select = [
+    "E",  # pycodestyle errors
+    "F",  # pyflakes
+    "I",  # isort (imports)
+    "B",  # flake8-bugbear
+    "C4", # flake8-comprehensions
+    "UP", # pyupgrade
+    "SIM",# simplify
+    "ARG",# unused arguments
+]
+
+ignore = [
+    "E203", # whitespace before ':'
+    "SIM115", 
+]
+
+[tool.ruff.format]
+quote-style = "preserve"
+indent-style = "space"
+line-ending = "auto"
+
+[tool.ruff.lint.isort]
+known-first-party = ["treezy"]
 
 [tool.pylint.messages_control]
 disable = [
@@ -54,8 +84,8 @@ disable = [
 [tool.bumpver]
 current_version = "0.0.1"
 version_pattern = "MAJOR.MINOR.PATCH"
-commit_message = "bump version {old_version} -> {new_version}"
-tag_message = "{new_version}"
+commit_message = "bump version v{old_version} -> v{new_version}"
+tag_message = "v{new_version}"
 tag_scope = "default"
 pre_commit_hook = ""
 post_commit_hook = ""

@@ -3,8 +3,9 @@
 
 import copy
 import difflib
+from collections.abc import Iterator
 from random import choice
-from typing import Any, Iterator, Optional
+from typing import Any, Optional
 
 from treezy.node import Node
 
