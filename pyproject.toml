@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "treezy"
-version = "0.0.1"
+version = "0.0.2"
 description = "Simple library for manipulating phylogenetic trees"
 authors = [{ name = "Mathieu Fourment", email = "mathieu.fourment@uts.edu.au" }]
 keywords=[
@@ -82,7 +82,7 @@ disable = [
 ]
 
 [tool.bumpver]
-current_version = "0.0.1"
+current_version = "0.0.2"
 version_pattern = "MAJOR.MINOR.PATCH"
 commit_message = "bump version v{old_version} -> v{new_version}"
 tag_message = "v{new_version}"

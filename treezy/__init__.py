@@ -7,7 +7,7 @@ This package provides tools for working with phylogenetic trees, including
 parsing, manipulation, and comparison operations.
 """
 
-__version__ = "0.0.1"
+__version__ = "0.0.2"
 
 from treezy.newick import NewickReader
 from treezy.nexus import NexusReader, NexusWriter
